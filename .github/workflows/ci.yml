@@ -20,6 +20,8 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - name: 运行单元测试
+        env:
+          PYTHONPATH: src
         run: python -m unittest discover -s tests -v
       - name: 冒烟测试(CLI)
         run: |
