@@ -9,7 +9,7 @@ description = "一个仓库,四种用法:Python 库 / 命令行 / 网页版 / �
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-authors = [{ name = "Your Name" }]
+authors = [{ name = "JAKE1266" }]
 keywords = ["toolbox", "cli", "file-organizer", "dedupe", "password-generator", "tkinter", "gui"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -28,8 +28,8 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourname/py-toolbox"
-Issues = "https://github.com/yourname/py-toolbox/issues"
+Homepage = "https://github.com/JAKE1266/py-toolbox"
+Issues = "https://github.com/JAKE1266/py-toolbox/issues"
 
 [project.scripts]
 pytoolbox = "pytoolbox.cli:main"

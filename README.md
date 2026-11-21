@@ -7,9 +7,8 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
-<!-- 推送到 GitHub 后可启用动态徽章(把 yourname 换成你的用户名):
-![CI](https://github.com/yourname/py-toolbox/actions/workflows/ci.yml/badge.svg)
--->
+<!-- 启用动态徽章:CI 徽章随推送自动点亮 -->
+![CI](https://github.com/JAKE1266/py-toolbox/actions/workflows/ci.yml/badge.svg)
 
 ## ✨ 功能
 
@@ -33,7 +32,7 @@
 ### 方式一:克隆即用(推荐先体验)
 
 ```bash
-git clone https://github.com/yourname/py-toolbox.git
+git clone https://github.com/JAKE1266/py-toolbox.git
 cd py-toolbox
 python -m pytoolbox --help
 ```
