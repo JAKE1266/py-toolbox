@@ -85,11 +85,14 @@ class ToolBoxApp(tk.Tk):
         frame.pack(fill="x", pady=4)
         return frame
 
-    def _run_button(self, parent, fn):
-        """创建执行按钮;任务在后台线程运行,完成后写回输出区。"""
-        def worker():
+    def _run_button(self, parent, fn, before=None):
+        """创建执行按钮;任务在后台线程运行,完成后写回输出区。
+
+        :param before: 可选回调,在【主线程】点击时先执行,用于安全地读取界面控件。
+        """
+        def worker(arg):
             try:
-                text, error = fn(), None
+                text, error = fn(arg), None
             except Exception as exc:  # 后台线程:捕获后回到主线程提示
                 text, error = None, exc
             self.after(0, lambda: self._finish(btn, text, error))
@@ -97,7 +100,9 @@ class ToolBoxApp(tk.Tk):
         def start():
             btn.config(state="disabled")
             self._log(f"\n>>> 开始处理,请稍候…")
-            threading.Thread(target=worker, daemon=True).start()
+            # 在主线程读取所有控件状态,绝不在后台线程碰 Tk 控件
+            arg = before() if before is not None else None
+            threading.Thread(target=worker, args=(arg,), daemon=True).start()
 
         btn = ttk.Button(parent, text="开始执行", command=start)
         btn.pack(pady=6)
@@ -137,11 +142,12 @@ class ToolBoxApp(tk.Tk):
         dry = tk.BooleanVar(value=True)
         ttk.Checkbutton(frame, text="预览模式(不实际移动文件)", variable=dry).pack(anchor="w")
 
-        def task():
-            result = organize(folder.get().strip() or ".", dry_run=dry.get())
+        def task(opts):
+            folder_path, dry_v = opts
+            result = organize(folder_path.strip() or ".", dry_run=dry_v)
             return self._fmt_organize(result)
 
-        self._run_button(frame, task)
+        self._run_button(frame, task, before=lambda: (folder.get(), dry.get()))
         return frame
 
     def _tab_rename(self, notebook):
@@ -165,16 +171,20 @@ class ToolBoxApp(tk.Tk):
         dry = tk.BooleanVar(value=True)
         ttk.Checkbutton(frame, text="预览模式(不实际重命名)", variable=dry).pack(anchor="w")
 
-        def task():
-            result = batch_rename(folder.get().strip() or ".", dry_run=dry.get(),
-                                  prefix=prefix.get(), suffix=suffix.get(),
-                                  start=int(start), padding=int(padding))
+        def task(opts):
+            folder_path, prefix_v, suffix_v, start_v, padding_v, dry_v = opts
+            result = batch_rename(folder_path.strip() or ".", dry_run=dry_v,
+                                  prefix=prefix_v, suffix=suffix_v,
+                                  start=int(start_v), padding=int(padding_v))
             lines = [f"目录:{result['folder']}"]
             lines += [f"  {c['from']}  ->  {c['to']}" for c in result["changes"]]
             tail = f"{'[预览]' if result['dry_run'] else '[OK]'} 共 {result['total']} 个文件"
             return "\n".join(lines + [tail])
 
-        self._run_button(frame, task)
+        def collect():
+            return (folder.get(), prefix.get(), suffix.get(), start.get(), padding.get(), dry.get())
+
+        self._run_button(frame, task, before=collect)
         return frame
 
     def _tab_dedupe(self, notebook):
@@ -183,8 +193,9 @@ class ToolBoxApp(tk.Tk):
         recursive = tk.BooleanVar()
         ttk.Checkbutton(frame, text="递归子目录", variable=recursive).pack(anchor="w")
 
-        def task():
-            result = find_duplicates(folder.get().strip() or ".", recursive=recursive.get())
+        def task(opts):
+            folder_path, recursive_v = opts
+            result = find_duplicates(folder_path.strip() or ".", recursive=recursive_v)
             if result["group_count"] == 0:
                 return "未发现重复文件。"
             lines = [f"发现 {result['group_count']} 组重复,可释放 {_format_bytes(result['wasted_bytes'])}"]
@@ -194,7 +205,7 @@ class ToolBoxApp(tk.Tk):
                     lines.append(f"  {'[保留]' if i == 0 else '[重复]'} {path}")
             return "\n".join(lines)
 
-        self._run_button(frame, task)
+        self._run_button(frame, task, before=lambda: (folder.get(), recursive.get()))
         return frame
 
     def _tab_passgen(self, notebook):
@@ -212,16 +223,20 @@ class ToolBoxApp(tk.Tk):
         for text, var in (("大写", upper), ("小写", lower), ("数字", digits), ("符号", symbols)):
             ttk.Checkbutton(checks, text=text, variable=var).pack(side="left", padx=4)
 
-        def task():
-            passwords = generate_passwords(int(count), length=int(length), upper=upper.get(),
-                                           lower=lower.get(), digits=digits.get(),
-                                           symbols=symbols.get())
+        def task(opts):
+            length_v, count_v, upper_v, lower_v, digits_v, symbols_v = opts
+            passwords = generate_passwords(int(count_v), length=int(length_v), upper=upper_v,
+                                           lower=lower_v, digits=digits_v,
+                                           symbols=symbols_v)
             return "\n".join(
                 f"  {pw}   ({estimate_strength(pw)['label']}, {estimate_strength(pw)['entropy_bits']} bits)"
                 for pw in passwords
             )
 
-        self._run_button(frame, task)
+        def collect():
+            return (length.get(), count.get(), upper.get(), lower.get(), digits.get(), symbols.get())
+
+        self._run_button(frame, task, before=collect)
         return frame
 
     def _tab_stats(self, notebook):
@@ -229,8 +244,7 @@ class ToolBoxApp(tk.Tk):
         input_box = tk.Text(frame, height=6, wrap="word", font=("TkFixedFont", 10))
         input_box.pack(fill="x")
 
-        def task():
-            text = input_box.get("1.0", "end").rstrip("\n")
+        def task(text):
             if not text.strip():
                 return "(请先在上方输入文本)"
             s = text_stats(text)
@@ -238,7 +252,8 @@ class ToolBoxApp(tk.Tk):
                     f"英文单词 {s['latin_words']}  |  总词数 {s['words']}  |  行数 {s['lines']}  |  "
                     f"UTF-8 字节 {s['bytes_utf8']}")
 
-        self._run_button(frame, task)
+        # 关键:在主线程读取 Tk 控件,再交给后台线程处理,避免跨线程访问崩溃
+        self._run_button(frame, task, before=lambda: input_box.get("1.0", "end").rstrip("\n"))
         return frame
 
 
