@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PyToolBox 工具箱</title>
+<style>
+  :root {
+    --bg: #0b1220; --panel: #111a2e; --line: #223051; --text: #e6ecff;
+    --muted: #8ea0c6; --accent: #38bdf8; --ok: #34d399; --warn: #fbbf24; --danger: #f87171;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font-family: "Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 28px 16px 64px; }
+  header h1 { margin: 0; font-size: 26px; letter-spacing: .5px; }
+  header .sub { color: var(--muted); margin: 6px 0 0; font-size: 13px; }
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 22px 0 14px; }
+  .tabs button { background: var(--panel); color: var(--muted); border: 1px solid var(--line);
+                 border-radius: 10px; padding: 9px 16px; cursor: pointer; font-size: 14px; }
+  .tabs button:hover { color: var(--text); border-color: var(--accent); }
+  .tabs button.active { color: #04121f; background: linear-gradient(135deg, #38bdf8, #34d399);
+                        border-color: transparent; font-weight: 600; }
+  .card { display: none; background: var(--panel); border: 1px solid var(--line);
+          border-radius: 14px; padding: 20px 22px; }
+  .card.active { display: block; }
+  .card h2 { margin: 0 0 4px; font-size: 18px; }
+  .card .desc { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 12px 0; }
+  input[type=text], input[type=number], textarea { background: #0d1526; border: 1px solid var(--line);
+      color: var(--text); border-radius: 9px; padding: 10px 12px; font-size: 14px; outline: none; }
+  input:focus, textarea:focus { border-color: var(--accent); }
+  input[type=text] { flex: 1 1 320px; }
+  textarea { width: 100%; resize: vertical; font-family: Consolas, monospace; }
+  label.chk { display: inline-flex; align-items: center; gap: 6px; color: var(--muted);
+              font-size: 13px; cursor: pointer; user-select: none; }
+  button.primary { background: linear-gradient(135deg, #0ea5e9, #34d399); color: #04121f;
+      border: none; border-radius: 9px; padding: 10px 22px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  button.primary:disabled { opacity: .55; cursor: wait; }
+  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line);
+                 border-radius: 9px; padding: 8px 14px; cursor: pointer; font-size: 13px; }
+  button.ghost:hover { color: var(--text); border-color: var(--accent); }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 6px; word-break: break-all; }
+  pre.out { background: #0a0f1d; border: 1px solid var(--line); border-radius: 10px; padding: 14px;
+            white-space: pre-wrap; word-break: break-all; font-family: Consolas, monospace;
+            font-size: 13px; line-height: 1.65; min-height: 24px; display: none; }
+  pre.out.show { display: block; }
+  pre.out.err { border-color: var(--danger); color: #fecaca; }
+  .pwlist { display: grid; gap: 10px; margin-top: 12px; }
+  .pwitem { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+            background: #0d1526; border: 1px solid var(--line); border-radius: 9px; padding: 10px 14px; }
+  .pwitem code { font-family: Consolas, monospace; font-size: 15px; letter-spacing: .5px; }
+  .badge { font-size: 12px; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .b0 { color: #fecaca; background: #7f1d1d33; } .b1 { color: #fbbf24; background: #78350f33; }
+  .b2 { color: #38bdf8; background: #0c4a6e33; } .b3 { color: #34d399; background: #064e3b33; }
+  .b4 { color: #a7f3d0; background: #065f4633; }
+  footer { margin-top: 34px; color: var(--muted); font-size: 12px; text-align: center; }
+  footer code { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>PyToolBox 工具箱</h1>
+    <p class="sub">零依赖 · 本地运行 · 网页版 v1.0.0 —— 服务只监听 <code>127.0.0.1</code>,数据不会离开你的电脑</p>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button class="active" data-tab="organize">🗂 文件整理</button>
+    <button data-tab="rename">✏️ 批量重命名</button>
+    <button data-tab="dedupe">🔍 重复文件</button>
+    <button data-tab="passgen">🔑 密码生成</button>
+    <button data-tab="stats">📊 文本统计</button>
+  </nav>
+
+  <!-- 文件整理 -->
+  <section class="card active" id="tab-organize">
+    <h2>按类型整理文件夹</h2>
+    <p class="desc">把散乱的文件按扩展名自动归入「图片 / 文档 / 音频 / 视频 / 压缩包 / 代码 / 其他」子目录。</p>
+    <div class="row">
+      <input type="text" id="org-folder" placeholder="输入文件夹路径,如 C:\Users\you\Downloads">
+      <button class="ghost" onclick="peek('org-folder','org-hint')">检查目录</button>
+    </div>
+    <div class="hint" id="org-hint"></div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="org-dry" checked> 预览模式(不实际移动)</label>
+      <button class="primary" id="org-btn" onclick="runOrganize()">开始整理</button>
+    </div>
+    <pre class="out" id="org-out"></pre>
+  </section>
+
+  <!-- 批量重命名 -->
+  <section class="card" id="tab-rename">
+    <h2>批量重命名</h2>
+    <p class="desc">把文件夹里的文件统一命名为「前缀 + 序号 + 后缀」,例如 <code>photo_001.jpg</code>。</p>
+    <div class="row">
+      <input type="text" id="ren-folder" placeholder="输入文件夹路径">
+      <button class="ghost" onclick="peek('ren-folder','ren-hint')">检查目录</button>
+    </div>
+    <div class="hint" id="ren-hint"></div>
+    <div class="row">
+      <input type="text" id="ren-prefix" style="max-width:140px" value="file_" placeholder="前缀">
+      <input type="text" id="ren-suffix" style="max-width:120px" placeholder="后缀">
+      <label class="chk">起始 <input type="number" id="ren-start" value="1" min="0" style="width:70px"></label>
+      <label class="chk">补零 <input type="number" id="ren-pad" value="3" min="1" max="8" style="width:60px"></label>
+    </div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="ren-dry" checked> 预览模式(不实际重命名)</label>
+      <button class="primary" id="ren-btn" onclick="runRename()">开始重命名</button>
+    </div>
+    <pre class="out" id="ren-out"></pre>
+  </section>
+
+  <!-- 重复文件 -->
+  <section class="card" id="tab-dedupe">
+    <h2>查找重复文件</h2>
+    <p class="desc">按内容哈希(md5)精确比对,找出内容完全相同的文件;先比大小再算哈希,速度快、内存省。</p>
+    <div class="row">
+      <input type="text" id="dd-folder" placeholder="输入文件夹路径">
+      <button class="ghost" onclick="peek('dd-folder','dd-hint')">检查目录</button>
+    </div>
+    <div class="hint" id="dd-hint"></div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="dd-recursive"> 递归子目录</label>
+      <button class="primary" id="dd-btn" onclick="runDedupe()">开始查找</button>
+    </div>
+    <pre class="out" id="dd-out"></pre>
+  </section>
+
+  <!-- 密码生成 -->
+  <section class="card" id="tab-passgen">
+    <h2>密码生成</h2>
+    <p class="desc">基于密码学安全随机源(secrets)生成,并保证包含每一类已选字符。</p>
+    <div class="row">
+      <label class="chk">长度 <input type="number" id="pg-len" value="16" min="4" max="128" style="width:70px"></label>
+      <label class="chk">数量 <input type="number" id="pg-count" value="5" min="1" max="50" style="width:70px"></label>
+    </div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="pg-upper" checked> 大写</label>
+      <label class="chk"><input type="checkbox" id="pg-lower" checked> 小写</label>
+      <label class="chk"><input type="checkbox" id="pg-digits" checked> 数字</label>
+      <label class="chk"><input type="checkbox" id="pg-symbols" checked> 符号</label>
+      <label class="chk"><input type="checkbox" id="pg-clean" checked> 剔除易混淆字符(Il1O0o)</label>
+      <button class="primary" id="pg-btn" onclick="runPassgen()">生成</button>
+    </div>
+    <div class="pwlist" id="pg-out"></div>
+  </section>
+
+  <!-- 文本统计 -->
+  <section class="card" id="tab-stats">
+    <h2>文本统计</h2>
+    <p class="desc">中英混排友好:英文按单词计,中文按字计。</p>
+    <textarea id="st-text" rows="7" placeholder="把要统计的文本粘贴到这里…"></textarea>
+    <div class="row">
+      <button class="primary" id="st-btn" onclick="runStats()">统计</button>
+    </div>
+    <pre class="out" id="st-out"></pre>
+  </section>
+
+  <footer>PyToolBox · 在本机运行:<code>python -m pytoolbox web</code> · 仓库 README 含完整文档</footer>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+// 标签页切换
+document.querySelectorAll("#tabs button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#tabs button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".card").forEach(c => c.classList.remove("active"));
+    btn.classList.add("active");
+    $("tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+async function api(path, body) {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body || {})
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || "请求失败");
+  return data.data;
+}
+
+function show(id, text, isError) {
+  const el = $(id);
+  el.textContent = text;
+  el.classList.toggle("err", !!isError);
+  el.classList.add("show");
+}
+
+function busy(btn, on) { btn.disabled = on; btn.textContent = on ? "处理中…" : btn.dataset.label; }
+function arm(btn) { btn.dataset.label = btn.textContent; }
+document.querySelectorAll("button.primary").forEach(arm);
+
+function renderOrganize(d) {
+  const lines = [`共 ${d.total} 个文件${d.dry_run ? "(预览)" : ""}`];
+  for (const [cat, items] of Object.entries(d.details)) {
+    lines.push(`[${cat}]`);
+    items.forEach(it => lines.push(`  ${it.from}  →  ${it.to}`));
+  }
+  if (d.dry_run && d.total) lines.push("(预览模式,未实际移动;取消勾选后可执行)");
+  show("org-out", lines.join("\n"));
+}
+
+async function runOrganize() {
+  const btn = $("org-btn"); busy(btn, true);
+  try { renderOrganize(await api("/api/organize", { folder: $("org-folder").value.trim(), dry_run: $("org-dry").checked })); }
+  catch (e) { show("org-out", "出错:" + e.message, true); }
+  busy(btn, false);
+}
+
+function renderRename(d) {
+  const lines = d.changes.map(c => `  ${c.from}  →  ${c.to}`);
+  lines.push(`${d.dry_run ? "预览" : "完成"}:共 ${d.total} 个文件`);
+  show("ren-out", lines.join("\n"));
+}
+
+async function runRename() {
+  const btn = $("ren-btn"); busy(btn, true);
+  try {
+    renderRename(await api("/api/rename", {
+      folder: $("ren-folder").value.trim(), prefix: $("ren-prefix").value,
+      suffix: $("ren-suffix").value, start: +$("ren-start").value || 1,
+      padding: +$("ren-pad").value || 3, dry_run: $("ren-dry").checked
+    }));
+  } catch (e) { show("ren-out", "出错:" + e.message, true); }
+  busy(btn, false);
+}
+
+async function runDedupe() {
+  const btn = $("dd-btn"); busy(btn, true);
+  try {
+    const d = await api("/api/dedupe", { folder: $("dd-folder").value.trim(), recursive: $("dd-recursive").checked });
+    if (!d.group_count) { show("dd-out", "未发现重复文件 ✔"); }
+    else {
+      const bytes = d.wasted_bytes, units = ["B", "KB", "MB", "GB"];
+      let size = bytes, u = 0; while (size >= 1024 && u < 3) { size /= 1024; u++; }
+      const lines = [`发现 ${d.group_count} 组重复,可释放约 ${size.toFixed(1)} ${units[u]}`];
+      for (const [hash, paths] of Object.entries(d.groups)) {
+        lines.push(`[${hash.slice(0, 12)}]`);
+        paths.forEach((p, i) => lines.push(`  ${i === 0 ? "保留" : "重复"}  ${p}`));
+      }
+      show("dd-out", lines.join("\n"));
+    }
+  } catch (e) { show("dd-out", "出错:" + e.message, true); }
+  busy(btn, false);
+}
+
+const BADGE = ["b0", "b1", "b2", "b3", "b4"];
+async function runPassgen() {
+  const btn = $("pg-btn"); busy(btn, true);
+  try {
+    const d = await api("/api/passgen", {
+      length: +$("pg-len").value || 16, count: +$("pg-count").value || 5,
+      upper: $("pg-upper").checked, lower: $("pg-lower").checked,
+      digits: $("pg-digits").checked, symbols: $("pg-symbols").checked,
+      exclude_ambiguous: $("pg-clean").checked
+    });
+    $("pg-out").innerHTML = d.passwords.map(p =>
+      `<div class="pwitem"><code>${p.password}</code>
+       <span class="badge ${BADGE[p.score]}">${p.label} · ${p.entropy_bits} bits</span></div>`).join("");
+  } catch (e) { show("st-out", "出错:" + e.message, true); }
+  busy(btn, false);
+}
+
+async function runStats() {
+  const btn = $("st-btn"); busy(btn, true);
+  try {
+    const s = await api("/api/stats", { text: $("st-text").value });
+    show("st-out",
+      `总字符 ${s.chars} | 去空白 ${s.chars_no_space} | 中文 ${s.cjk_chars} | 英文单词 ${s.latin_words}\n` +
+      `总词数 ${s.words} | 行数 ${s.lines} | UTF-8 字节 ${s.bytes_utf8}`);
+  } catch (e) { show("st-out", "出错:" + e.message, true); }
+  busy(btn, false);
+}
+
+async function peek(inputId, hintId) {
+  const folder = $(inputId).value.trim();
+  const hint = $(hintId);
+  if (!folder) { hint.textContent = "请先输入文件夹路径"; return; }
+  try {
+    const d = await api("/api/listdir", { folder });
+    hint.textContent = `✔ 目录有效:${d.dirs.length} 个子目录,${d.files.length} 个文件` +
+      (d.files.length ? `,例如:${d.files.slice(0, 3).join("、")}` : "");
+  } catch (e) { hint.textContent = "✘ " + e.message; }
+}
+</script>
+</body>
+</html>
