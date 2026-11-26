@@ -7,9 +7,7 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
-<!-- 推送到 GitHub 后可启用动态徽章(把 yourname 换成你的用户名):
-![CI](https://github.com/yourname/py-toolbox/actions/workflows/ci.yml/badge.svg)
--->
+![CI](https://github.com/JAKE1266/py-toolbox/actions/workflows/ci.yml/badge.svg)
 
 ## ✨ 功能
 
@@ -33,7 +31,7 @@
 ### 方式一:克隆即用(推荐先体验)
 
 ```bash
-git clone https://github.com/yourname/py-toolbox.git
+git clone https://github.com/JAKE1266/py-toolbox.git
 cd py-toolbox
 python -m pytoolbox --help
 ```
@@ -162,8 +160,9 @@ PYTHONPATH=src python -m unittest discover -s tests -v
 dry-run 预览,确认无误再去掉 `--dry-run` 真正执行。
 
 **Q: 想发布到 PyPI?**
-`pytoolbox` 是占位名,发布前请在 `pyproject.toml` 里换一个未被占用的名字
-(如 `pytoolbox-kit`),并补上你的用户名与仓库地址。
+先确认 `pytoolbox` 这个名字在 PyPI 上未被占用;若已被占用,在 `pyproject.toml`
+里改成未被占用的名字(如 `pytoolbox-kit`)再 `pip install .`。
+仓库地址与作者已配置为 `JAKE1266/py-toolbox`。
 
 ## 🤝 贡献
 
