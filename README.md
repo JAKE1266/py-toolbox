@@ -7,7 +7,6 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
-<!-- 启用动态徽章:CI 徽章随推送自动点亮 -->
 ![CI](https://github.com/JAKE1266/py-toolbox/actions/workflows/ci.yml/badge.svg)
 
 ## ✨ 功能
@@ -101,7 +100,7 @@ text_stats("Hello 你好,PyToolBox!")                # {'chars': 18, 'words': 4,
 pytoolbox organize  <目录> [-n]      按类型整理文件夹
 pytoolbox rename    <目录> [-p 前缀] 批量重命名
 pytoolbox dedupe    <目录> [-r]      查找重复文件
-pytoolbox passgen   [-l 长度] [-n 个数]  生成强密码
+pytoolbox passgen   [-l 长度] [-c 个数]  生成强密码
 pytoolbox stats     [文件|-]         文本统计
 pytoolbox web       [--port 8000]    启动网页版
 pytoolbox gui                        启动桌面版
@@ -123,7 +122,7 @@ py-toolbox/
 │   ├── cli.py                 # 命令行入口(argparse)
 │   ├── webapp.py              # 网页版服务(http.server)
 │   └── gui.py                 # 桌面版(Tkinter)
-├── tests/                     # 单元测试(unittest,免安装可跑)
+├── tests/                     # 单元测试(unittest)
 ├── pyproject.toml             # 打包配置(可 pip install)
 ├── LICENSE                    # MIT
 └── README.md
@@ -132,11 +131,15 @@ py-toolbox/
 ## 🧪 开发与测试
 
 ```bash
-# 免安装直接跑测试
-PYTHONPATH=src python -m unittest discover -s tests -v
+# 推荐:先以可编辑模式安装(项目为 src 布局,包在 src/ 下)
+python -m pip install -e .
+python -m unittest discover -s tests -v
 
+# 不想安装也可临时指定包路径:
 # Windows(PowerShell):
 $env:PYTHONPATH="src"; python -m unittest discover -s tests -v
+# macOS / Linux:
+PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
 架构上,`core/` 只做纯逻辑、不碰任何界面库,CLI/Web/GUI 三端共享同一实现并各有测试;
@@ -157,14 +160,15 @@ $env:PYTHONPATH="src"; python -m unittest discover -s tests -v
 dry-run 预览,确认无误再去掉 `--dry-run` 真正执行。
 
 **Q: 想发布到 PyPI?**
-`pytoolbox` 是占位名,发布前请在 `pyproject.toml` 里换一个未被占用的名字
-(如 `pytoolbox-kit`),并补上你的用户名与仓库地址。
+先确认 `pytoolbox` 这个名字在 PyPI 上未被占用;若已被占用,在 `pyproject.toml`
+里改成未被占用的名字(如 `pytoolbox-kit`)再 `pip install .`。
+仓库地址与作者已配置为 `JAKE1266/py-toolbox`。
 
 ## 🤝 贡献
 
 欢迎 Issue 与 PR!提交前请:
 
-1. `python -m unittest discover -s tests` 保证测试通过
+1. `python -m pip install -e .` 然后 `python -m unittest discover -s tests` 保证测试通过
 2. 新功能请附带对应单元测试
 3. 保持「core 纯逻辑、界面薄壳」的分层结构
 
