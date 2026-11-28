@@ -3,10 +3,15 @@
 import contextlib
 import io
 import json
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
+from importlib.metadata import PackageNotFoundError, distribution
 from pathlib import Path
 
+import pytoolbox
 from pytoolbox.cli import main
 
 
@@ -62,6 +67,33 @@ class CliTest(unittest.TestCase):
             data = json.loads(out)
             self.assertEqual(data["cjk_chars"], 4)
             self.assertEqual(data["latin_words"], 1)
+
+    def test_utf8_under_legacy_console_encoding(self):
+        env = {**os.environ, "PYTHONIOENCODING": "cp1252", "PYTHONUTF8": "0"}
+        env.pop("PYTHONPATH", None)
+        try:
+            installed = distribution("pytoolbox")
+            installed_init = Path(installed.locate_file("pytoolbox/__init__.py"))
+            if installed.version != pytoolbox.__version__ or not installed_init.is_file():
+                raise PackageNotFoundError
+        except PackageNotFoundError:
+            env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1] / "src")
+        result = subprocess.run(
+            [sys.executable, "-m", "pytoolbox", "--help"],
+            capture_output=True, env=env,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr.decode("utf-8"))
+        self.assertIn("密码", result.stdout.decode("utf-8"))
+
+        result = subprocess.run(
+            [sys.executable, "-m", "pytoolbox", "stats", "--json"],
+            input="你好 world".encode("utf-8"),
+            capture_output=True, env=env,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr.decode("utf-8"))
+        data = json.loads(result.stdout.decode("utf-8"))
+        self.assertEqual(data["cjk_chars"], 2)
+        self.assertEqual(data["latin_words"], 1)
 
     def test_human_output(self):
         code, out, _ = self.run_cli("passgen", "--count", "1")

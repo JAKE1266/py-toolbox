@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import secrets
 import threading
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -22,6 +23,16 @@ from .core.textstats import text_stats
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 
 _ERROR_TYPES = (KeyError, TypeError, ValueError, OSError, NotADirectoryError, FileNotFoundError, RuntimeError)
+_SECURITY_HEADERS = {
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Content-Security-Policy": (
+        "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
+        "connect-src 'self'; img-src 'self' data:; base-uri 'none'; "
+        "frame-ancestors 'none'; form-action 'none'"
+    ),
+}
 
 
 # ---------------------------------------------------------------- API 处理函数
@@ -87,17 +98,54 @@ ROUTES = {
 class _Handler(BaseHTTPRequestHandler):
     server_version = f"PyToolBox/{__version__}"
 
+    # ---------------------------------------------------------------- 安全层
+
+    def _security_headers(self) -> None:
+        for name, value in _SECURITY_HEADERS.items():
+            self.send_header(name, value)
+
+    def _host_allowed(self) -> bool:
+        supplied = self.headers.get("Host", "").lower()
+        return bool(supplied) and supplied in getattr(self.server, "allowed_hosts", set())
+
+    def _same_origin(self) -> bool:
+        origin = self.headers.get("Origin")
+        if origin is None:
+            return True
+        host = self.headers.get("Host", "")
+        return origin.lower().rstrip("/") == f"http://{host}".lower()
+
+    def _authorized(self) -> bool:
+        expected = getattr(self.server, "auth_token", "")
+        provided = self.headers.get("X-PyToolBox-Token", "")
+        return bool(expected and provided) and secrets.compare_digest(
+            provided.encode("utf-8"), expected.encode("utf-8")
+        )
+
+    # ---------------------------------------------------------------- 响应
+
     def _send(self, code: int, content_type: str, body: bytes) -> None:
         self.send_response(code)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self._security_headers()
         self.end_headers()
         self.wfile.write(body)
 
     def _send_json(self, code: int, obj: dict) -> None:
         self._send(code, "application/json; charset=utf-8",
                    json.dumps(obj, ensure_ascii=False).encode("utf-8"))
+
+    def _reject_json(self, code: int, obj: dict) -> None:
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = 0
+        if 0 < length <= 1024 * 1024:
+            self.rfile.read(length)
+        self.close_connection = True
+        self._send_json(code, obj)
 
     def do_GET(self) -> None:
         if self.path in ("/", "/index.html"):
@@ -112,6 +160,15 @@ class _Handler(BaseHTTPRequestHandler):
         handler = ROUTES.get(self.path.split("?")[0])
         if handler is None:
             self._send_json(404, {"ok": False, "error": "未知接口"})
+            return
+        if not self._host_allowed():
+            self._reject_json(403, {"ok": False, "error": "不受信任的 Host"})
+            return
+        if not self._same_origin():
+            self._reject_json(403, {"ok": False, "error": "跨源请求已拒绝"})
+            return
+        if not self._authorized():
+            self._reject_json(401, {"ok": False, "error": "缺少或错误的访问令牌"})
             return
         try:
             length = int(self.headers.get("Content-Length") or 0)
@@ -130,13 +187,25 @@ class _Handler(BaseHTTPRequestHandler):
         print(f"[web] {fmt % args}")
 
 
+def _create_server(host: str = "127.0.0.1", port: int = 8000, token: str | None = None):
+    server = ThreadingHTTPServer((host, port), _Handler)
+    actual_port = server.server_address[1]
+    hostnames = {host, server.server_address[0]}
+    if host in ("", "0.0.0.0", "127.0.0.1", "localhost"):
+        hostnames.update(("127.0.0.1", "localhost"))
+    server.allowed_hosts = {f"{name}:{actual_port}".lower() for name in hostnames}
+    server.auth_token = token or secrets.token_urlsafe(32)
+    return server
+
+
 def serve(host: str = "127.0.0.1", port: int = 8000, open_browser: bool = True) -> None:
     """启动网页版服务(阻塞运行,Ctrl+C 停止)。"""
-    server = ThreadingHTTPServer((host, port), _Handler)
+    server = _create_server(host, port)
     display_host = "127.0.0.1" if host in ("0.0.0.0", "") else host
-    url = f"http://{display_host}:{port}"
+    url = f"http://{display_host}:{server.server_address[1]}/#token={server.auth_token}"
     print(f"PyToolBox 网页版 v{__version__}")
     print(f"地址:{url}(监听 {host},{'仅本机可访问' if host == '127.0.0.1' else '已对局域网开放,注意安全'})")
+    print("请使用打印的完整地址访问;URL 片段中的令牌不会发送给服务器,页面会自动携带它调用 API。")
     print("按 Ctrl+C 停止服务。")
     if open_browser:
         threading.Timer(0.8, webbrowser.open, args=(url,)).start()

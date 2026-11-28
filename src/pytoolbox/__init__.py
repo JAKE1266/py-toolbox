@@ -16,7 +16,7 @@ from pytoolbox.core.passgen import estimate_strength, generate_password, generat
 from pytoolbox.core.renamer import batch_rename
 from pytoolbox.core.textstats import stats_from_file, text_stats
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 __all__ = [
     "batch_rename",

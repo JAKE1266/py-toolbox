@@ -62,7 +62,7 @@
 <div class="wrap">
   <header>
     <h1>PyToolBox 工具箱</h1>
-    <p class="sub">零依赖 · 本地运行 · 网页版 v1.0.0 —— 服务只监听 <code>127.0.0.1</code>,数据不会离开你的电脑</p>
+    <p class="sub">零依赖 · 本地运行 · 网页版 v1.0.1 —— 默认仅监听 <code>127.0.0.1</code>,API 需一次性访问令牌</p>
   </header>
 
   <nav class="tabs" id="tabs">
@@ -174,10 +174,13 @@ document.querySelectorAll("#tabs button").forEach(btn => {
   });
 });
 
+const token = new URLSearchParams(location.hash.slice(1)).get("token") || "";
+
 async function api(path, body) {
+  if (!token) throw new Error("缺少访问令牌,请使用启动服务时打印的完整地址");
   const res = await fetch(path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-PyToolBox-Token": token },
     body: JSON.stringify(body || {})
   });
   const data = await res.json();
@@ -260,10 +263,20 @@ async function runPassgen() {
       digits: $("pg-digits").checked, symbols: $("pg-symbols").checked,
       exclude_ambiguous: $("pg-clean").checked
     });
-    $("pg-out").innerHTML = d.passwords.map(p =>
-      `<div class="pwitem"><code>${p.password}</code>
-       <span class="badge ${BADGE[p.score]}">${p.label} · ${p.entropy_bits} bits</span></div>`).join("");
-  } catch (e) { show("st-out", "出错:" + e.message, true); }
+    const output = $("pg-out");
+    output.replaceChildren();
+    for (const p of d.passwords) {
+      const item = document.createElement("div");
+      item.className = "pwitem";
+      const code = document.createElement("code");
+      code.textContent = p.password;
+      const badge = document.createElement("span");
+      badge.className = `badge ${BADGE[p.score]}`;
+      badge.textContent = `${p.label} · ${p.entropy_bits} bits`;
+      item.append(code, badge);
+      output.append(item);
+    }
+  } catch (e) { $("pg-out").textContent = "出错:" + e.message; }
   busy(btn, false);
 }
 

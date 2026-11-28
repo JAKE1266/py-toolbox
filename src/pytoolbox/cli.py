@@ -30,6 +30,13 @@ def _print_json(data) -> None:
     print(json.dumps(data, ensure_ascii=False, indent=2))
 
 
+def _configure_standard_streams() -> None:
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 # ---------------------------------------------------------------- 子命令实现
 
 def cmd_organize(args) -> int:
@@ -211,6 +218,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None) -> int:
+    _configure_standard_streams()
     parser = build_parser()
     args = parser.parse_args(argv)
     if not getattr(args, "func", None):

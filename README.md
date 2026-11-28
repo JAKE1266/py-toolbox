@@ -23,8 +23,8 @@
 
 - 🚀 **零依赖**:装好 Python 3.9+ 就能跑,无需 `pip install` 任何包
 - 🌍 **跨平台**:Windows / macOS / Linux;中文路径、中文界面友好
-- 🧪 **带测试**:30 个单元测试 + GitHub Actions 三系统 × 三版本 CI
-- 🔒 **安全默认**:网页版只监听 `127.0.0.1`,数据不出本机
+- 🧪 **带测试**:39 个单元测试 + 真实 wheel 三系统 × 四版本 CI
+- 🔒 **安全默认**:网页版只监听 `127.0.0.1`,API 需启动令牌并校验同源,数据不出本机
 
 ## 📦 安装
 
@@ -33,6 +33,7 @@
 ```bash
 git clone https://github.com/JAKE1266/py-toolbox.git
 cd py-toolbox
+python -m pip install -e .
 python -m pytoolbox --help
 ```
 
@@ -74,6 +75,9 @@ python -m pytoolbox web        # 自动打开浏览器,默认 http://127.0.0.1:8
 ```
 
 深色主题的单页应用,五个工具即点即用;停止服务按 `Ctrl+C`。
+每次启动会生成随机访问令牌并打印形如 `http://127.0.0.1:8000/#token=...` 的完整地址,
+请使用该完整地址访问,不要分享令牌。令牌位于 URL 片段,不会发送给服务器或进入 Referer;
+页面通过自定义请求头调用 API,服务端同时校验 Host、Origin 与令牌。
 
 ### 3️⃣ 桌面 GUI(无需任何依赖,Tkinter 随 Python 自带)
 
@@ -110,7 +114,7 @@ pytoolbox gui                        启动桌面版
 
 ```
 py-toolbox/
-├── .github/workflows/ci.yml   # CI:Ubuntu / Windows / macOS × Python 3.9-3.13
+├── .github/workflows/ci.yml   # 真实 wheel CI:三系统 × Python 3.9/3.10/3.12/3.13
 ├── src/pytoolbox/
 │   ├── core/                  # 核心功能层(与界面完全解耦)
 │   │   ├── organizer.py       #   文件整理
@@ -122,8 +126,10 @@ py-toolbox/
 │   ├── cli.py                 # 命令行入口(argparse)
 │   ├── webapp.py              # 网页版服务(http.server)
 │   └── gui.py                 # 桌面版(Tkinter)
-├── tests/                     # 单元测试(unittest)
+├── tests/                     # 单元测试与已安装 wheel 冒烟(unittest)
 ├── pyproject.toml             # 打包配置(可 pip install)
+├── MANIFEST.in                # sdist 额外文件清单
+├── CHANGELOG.md               # 版本更新记录
 ├── LICENSE                    # MIT
 └── README.md
 ```
@@ -152,8 +158,9 @@ PYTHONPATH=src python -m unittest discover -s tests -v
 "开箱即用、装完就能跑" 对小工具非常重要,也把供应链风险降到 0。
 
 **Q: 网页版安全吗?**
-默认只监听本机回环地址 `127.0.0.1`,局域网内其他设备无法访问。不要用 `--host 0.0.0.0`
-对外开放——本工具会执行文件移动等操作,不应暴露给不可信网络。
+默认只监听本机回环地址 `127.0.0.1`,局域网内其他设备无法访问。网页 API 必须携带每次启动
+生成的随机令牌,并校验 Host 与 Origin;所有响应还带防点击劫持、MIME 嗅探、无 Referer 和 CSP 头。
+不要用 `--host 0.0.0.0` 对外开放——本工具会执行文件移动等操作,不应暴露给不可信网络。
 
 **Q: 会覆盖我的文件吗?**
 整理/重命名遇到同名目标时自动追加「 (1)」等后缀,绝不覆盖;两者都默认
