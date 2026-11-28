@@ -46,6 +46,7 @@ jobs:
         if: runner.os == 'macOS' && matrix.python == '3.10'
         run: |
           brew install python-tk@3.10
+          "$(brew --prefix python@3.10)/bin/python3.10" -m pip install packaging
           mkdir -p "$RUNNER_TEMP/py310-bin"
           ln -sf "$(brew --prefix python@3.10)/bin/python3.10" "$RUNNER_TEMP/py310-bin/python"
           echo "$RUNNER_TEMP/py310-bin" >> "$GITHUB_PATH"
